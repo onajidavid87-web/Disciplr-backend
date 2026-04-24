@@ -198,7 +198,7 @@ function parseVaultPayload(
         }
       }
 
-      return payload
+      return payload;
 
     case 'vault_completed':
     case 'vault_failed':
