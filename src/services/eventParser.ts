@@ -214,6 +214,28 @@ function parseVaultPayload(
         console.error(`Vault created validation error: ${error}`)
         return null
       }
+
+      return payload;
+
+    case 'vault_completed':
+    case 'vault_failed':
+    case 'vault_cancelled':
+      const decoded = decodePayloadRecord(xdrData);
+      payload = {
+        vaultId: readStringField(decoded, 'vaultId') ?? '',
+        status: ((readStringField(decoded, 'status')) ?
+          eventType.replace('vault_', '') : undefined) as VaultEventPayload['status']
+      };
+
+      {
+        const statusError = validateVaultStatusPayload(payload)
+        if (statusError) {
+          console.error(`Vault status validation error: ${statusError}`)
+          return null
+        }
+        return payload
+      
+      default:
       return payload
     } else {
       const payload: VaultEventPayload = {

@@ -17,6 +17,8 @@ import { createVaultWithMilestones, getVaultById, listVaults, cancelVaultById } 
 import { createVaultSchema } from '../services/vaultValidation.js'
 import { queryParser } from '../middleware/queryParser.js'
 import { utcNow } from '../utils/timestamps.js'
+import { prisma } from '../lib/prisma.js'
+import { requireJson } from '../middleware/requireJson.js'
 import type { VaultCreateResponse } from '../types/vaults.js'
 import { formatValidationError } from '../lib/validation.js'
 
@@ -62,6 +64,11 @@ vaultsRouter.get(
   },
 )
 
+/**
+ * POST /api/vaults
+ */
+vaultsRouter.post('/', authenticate, requireJson, async (req: Request, res: Response) => {
+  const { creator, amount, endTimestamp, successDestination, failureDestination, milestoneHash, verifierAddress, contractId } = req.body
 // POST /api/vaults 
 
 vaultsRouter.post('/', authenticate, async (req: Request, res: Response) => {
@@ -113,6 +120,11 @@ vaultsRouter.post('/', authenticate, async (req: Request, res: Response) => {
   try {
     const { vault } = await createVaultWithMilestones(input)
 
+  // 2. Try In-memory
+  const vault = vaults.find(v => v.id === req.params.id)
+  if (!vault) {
+    res.status(404).json({ error: 'Vault not found' })
+    return
     const responseBody: VaultCreateResponse = {
       vault,
       onChain: await buildVaultCreationPayload(input, vault),
@@ -123,6 +135,7 @@ vaultsRouter.post('/', authenticate, async (req: Request, res: Response) => {
       await saveIdempotentResponse(scopedKey, requestHash, vault.id, responseBody)
     }
 
+    try {
     const actorUserId = (req.header('x-user-id') ?? input.creator) || req.user?.userId || 'unknown'
     createAuditLog({
       actor_user_id: actorUserId,
@@ -139,8 +152,12 @@ vaultsRouter.post('/', authenticate, async (req: Request, res: Response) => {
     console.error('Vault creation failed', error)
     res.status(500).json({ error: 'Failed to create vault.' })
   }
-})
+}
 
+/**
+ * POST /api/vaults/:id/cancel
+ */
+vaultsRouter.post('/:id/cancel', authenticate, requireJson, async (req, res) => {
 // ─── GET /api/vaults/:id ─────────────────────────────────────────────────────
 
 vaultsRouter.get('/:id', authenticate, async (req: Request, res: Response) => {
