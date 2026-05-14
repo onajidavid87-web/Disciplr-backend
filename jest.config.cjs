@@ -10,11 +10,7 @@ module.exports = {
       "ts-jest",
       {
         useESM: true,
-        tsconfig: {
-          module: "NodeNext",
-          moduleResolution: "NodeNext",
-          target: "ES2022",
-        },
+        tsconfig: "tsconfig.jest.json",
         diagnostics: { ignoreCodes: [151002] },
       },
     ],
